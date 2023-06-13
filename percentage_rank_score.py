@@ -3,12 +3,11 @@
 import pandas as pd
 
 
-def calculate_percent_ranking_score(df: pd.DataFrame, ranking_config: {list, dict}=None, sort_score=False)->pd.DataFrame:
+def calculate_percent_ranking(df: pd.DataFrame, ranking_config: {list, dict}=None)->pd.DataFrame:
     """
-    Calculates a score as a weighted sum of percent/normalized rankings
+    Calculates percent/normalized rankings
     :param df: DataFrame
     :param ranking_config: list dict
-    :param sort_score: bool
     :return: DataFrame
     """
 
@@ -25,8 +24,21 @@ def calculate_percent_ranking_score(df: pd.DataFrame, ranking_config: {list, dic
                                               kpi=rank_conf['kpi'],
                                               high_is_good=rank_conf['ascending'],
                                               group_by=rank_conf.get('group_by', None))
-
         result_df = result_df.join(ranking_df)
+
+    return result_df
+
+
+def calculate_percent_ranking_score(df: pd.DataFrame, ranking_config: {list, dict}=None, sort_score=False)->pd.DataFrame:
+    """
+    Calculates a score as a weighted sum of percent/normalized rankings
+    :param df: DataFrame
+    :param ranking_config: list dict
+    :param sort_score: bool
+    :return: DataFrame
+    """
+
+    result_df = calculate_percent_ranking(df=df, ranking_config=ranking_config)
 
     # on the first column calculate the score as the weighted sum of normalized ranks
     result_df.insert(0, 'score',
