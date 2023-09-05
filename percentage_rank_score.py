@@ -18,15 +18,14 @@ def calculate_percent_ranking(df: pd.DataFrame, ranking_config: {list, dict}=Non
         ranking_config = [ranking_config]
 
     # loop through each ranking and calculate a score a weighted score at the end
-    result_df = pd.DataFrame(index=df.index)  # initialize the result
+    result_df_list = []
     for rank_conf in ranking_config:  # loop through rankings
         ranking_df = _perform_percent_ranking(df=df,
                                               kpi=rank_conf['kpi'],
                                               high_is_good=rank_conf['ascending'],
                                               group_by=rank_conf.get('group_by', None))
-        result_df = result_df.join(ranking_df)
-
-    return result_df
+        result_df_list.append(ranking_df)
+    return pd.concat(result_df_list, axis=1)
 
 
 def calculate_percent_ranking_score(df: pd.DataFrame, ranking_config: {list, dict}=None, sort_score=False)->pd.DataFrame:
