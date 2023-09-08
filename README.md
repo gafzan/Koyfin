@@ -47,7 +47,8 @@ This requires that you have at least a "Plus" koyfin membership since it allows 
   * Store *Chromedriver path* to variable name 'CHROMEDRIVER_FULL_PATH'
   * Store koyfin.com *email* to variable name 'KOYFIN_EMAIL'
   * Store koyfin.com *password* to variable name 'KOYFIN_PASSWORD'
- 
+ ![EnviVar1](/images/envi_var_1.png?raw=true "Environment variables 1")
+ ![EnviVar2](/images/envi_var_2.png?raw=true "Environment variables 2")
  <p align="right">(<a href="#readme-top">back to top</a>)</p>
  
 ### Installation
