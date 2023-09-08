@@ -13,18 +13,15 @@
   </p>
 </div>
 
+
 <!-- TABLE OF CONTENTS -->
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-    <li>
-      <a href="#prerequisites">Prerequisites</a>
-    </li>
-    <a href="#installation">Installation</a>
-    </li>
-    <a href="#example">Example</a>
+    <li><a href="#about-the-project">About The Project</a></li>
+    <li><a href="#prerequisites">Prerequisites</a></li>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#example">Example</a></li>      
   </ol>
 </details>
 
