@@ -62,10 +62,6 @@ This requires that you have at least a "Plus" koyfin membership since it allows 
       ```sh
       pip install requirements.txt
       ```
-3. Enter your path to a folder that saves results in `config.py`
-   ```
-   KOYFIN_DATA_FOLDER_PATH = Path(r"...")  # TODO insert path to a save folder
-   ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
