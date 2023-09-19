@@ -1,6 +1,6 @@
 """demo_1.py"""
 
-from koyfinbot import KoyfinBot
+from automation.koyfinbot import KoyfinBot
 
 criteria = {
     'country': ['United States', 'Sweden'],

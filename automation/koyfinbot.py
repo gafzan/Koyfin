@@ -15,11 +15,11 @@ from selenium.webdriver.common.keys import Keys
 from tools.general_tools import get_newest_file_paths
 from tools.general_tools import DOWNLOADS_PATH
 
-from config import CHROMEDRIVER_FULL_PATH__
-from config import KOYFIN_URL
-from config import KOYFIN_PWD
-from config import KOYFIN_EMAIL
-from config import KOYFIN_DATA_FOLDER_PATH
+from automation.config import CHROMEDRIVER_FULL_PATH__
+from automation.config import KOYFIN_URL
+from automation.config import KOYFIN_PWD
+from automation.config import KOYFIN_EMAIL
+from automation.config import KOYFIN_DATA_FOLDER_PATH
 
 # logger
 formatter = logging.Formatter('%(asctime)s : %(module)s : %(funcName)s : %(message)s')

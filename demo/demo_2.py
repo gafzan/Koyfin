@@ -1,6 +1,6 @@
 """demo_2.py"""
 
-from koyfinbot import KoyfinDataDownloader
+from automation.koyfinbot import KoyfinDataDownloader
 
 criteria = [
     {
