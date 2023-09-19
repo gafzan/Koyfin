@@ -68,27 +68,20 @@ This requires that you have at least a "Plus" koyfin membership since it allows 
 
 
 <!-- USAGE EXAMPLES -->
-### Example
+### Implementation
 
 As an example, let's say that we want to download data for all stocks in United States and Sweden that are either in the 
-banking or energy industry (why not...?) we can set up a koyfinbot that does just that.
+banking or energy industry (why not...?) using the Koyfinbot.
 
 First step is to import what we need.
 ```
-from automation.koyfinbot import KoyfinBot
+from koyfinbot import KoyfinBot
 ```
-Next is to create a dictionary with the criteria.
+Next is to create a dictionary with the criteria. The values in the dictionary can either be strings or list of strings.
 ```
 criteria = {
     'country': ['United States', 'Sweden'],
     'industry': ['Banks', 'Energy']
-}
-```
-If we only needed data for Banks we could have defined the criteria as below:
-```
-criteria = {
-    'country': ['United States', 'Sweden'],
-    'industry': 'Banks'
 }
 ```
 
@@ -99,8 +92,8 @@ bot = KoyfinBot()  # initialize an instance of a KoyfinBot object
 bot.login()  # insert your credentials
 ```
 
-Next to to the 'My Screens', add a new screen and specify our criteria by inputting the above dictionary in 
-`add_universe_criteria()`
+Next go to the 'My Screens' page, add a new screen and specify our criteria by inputting the above dictionary in 
+`add_universe_criteria()`. We will also name the screen 'KoyfinBot demo'
 ```
 bot.go_to_my_screens()  # goes to the 'My Screens' page
 bot.add_new_screen()
@@ -108,19 +101,34 @@ bot.name_screen(name='KoyfinBot demo')
 bot.add_universe_criteria(criteria=criteria)
 bot.run_screener()
 ```
-Once we have our filtered universe of stocks, select the data view we will download.
+Once we have our filtered universe of stocks we could download the results but the data for each stock will be dictated 
+by the default data columns in Koyfin. We can customize the data columns by providing another dictionary. Assume that 
+the desired data is to get the industry, total debt and revenue growth estimates for the next 1, 2 and 3 years 
+(if available), then we can add columns like below and then download screener result.
 ```
-bot.select_top_screen_view()  # the KoyfinBot will download the data seen in the top view under 'My Views'
+data = {
+    'Industry': None,
+    'Total Debt': 'Last Twelve Months',
+    'Revenue Estimate CAGR': ['1 Year', '2 Year', '3 Year'],
+}  
+bot.add_data_columns(data_columns_config=data)
 bot.download_screener_result()  # the csv file will be stored under 'Downloads'
+bot.driver.close()
 ```
 
 The entire script looks like this:
 ```
-from automation.koyfinbot import KoyfinBot
+from koyfinbot import KoyfinBot
 
 criteria = {
     'country': ['United States', 'Sweden'],
     'industry': ['Banks', 'Energy']
+}
+
+data = {
+    'Industry': None,
+    'Total Debt': 'Last Twelve Months',
+    'Revenue Estimate CAGR': ['1 Year', '2 Year', '3 Year'],
 }
 
 bot = KoyfinBot()  # initialize an instance of a KoyfinBot object
@@ -130,17 +138,17 @@ bot.add_new_screen()
 bot.name_screen(name='KoyfinBot demo')
 bot.add_universe_criteria(criteria=criteria)
 bot.run_screener()
-bot.select_top_screen_view()  # the KoyfinBot will download the data seen in the top view under 'My Views'
+bot.add_data_columns(data_columns_config=data)
 bot.download_screener_result()  # the csv file will be stored under 'Downloads'
 bot.driver.close()
 ```
 
-This script worked for simple sets of criteria. If we have more complex criteria where we need to have several 
+This script worked for simple sets of criteria. If criteria is more complex where we need to have several 
 dictionaries we can use the ``KoyfinDataDownloader`` class. This object downloads data according to several criteria configurations and
 merges the data. Below is an example of an implementation where we want data for only bank stocks in United States and energy stocks in Sweden:
 
 ```
-from automation.koyfinbot import KoyfinDataDownloader
+from koyfinbot import KoyfinDataDownloader
 
 criteria = [
     {
@@ -153,8 +161,14 @@ criteria = [
     }
 ]
 
+data = {
+    'Industry': None,
+    'Total Debt': 'Last Twelve Months',
+    'Revenue Estimate CAGR': ['1 Year', '2 Year', '3 Year'],
+}
+
 bot = KoyfinDataDownloader(screen_criteria=criteria)
-bot.download_data()
+bot.download_data(data_config=data)
 bot.save_data()
 ```
 By default, the merged data will be saved in your downloads folder. You can change the save location 

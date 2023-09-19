@@ -58,10 +58,15 @@ class WebBot:
 
 
 class KoyfinBot(WebBot):
-    def __init__(self):
+    def __init__(self, remove_min_market_cap: bool = False):
+        """
+        Initiator for the KoyfinBot class
+        :param remove_min_market_cap: bool by default there is a minimum USD 50 million market cap filter applied
+        """
         super().__init__()
         self.driver.get(KOYFIN_URL)
         self._screen_number = 0
+        self.remove_min_market_cap = remove_min_market_cap
 
     def login(self):
         """
@@ -137,14 +142,16 @@ class KoyfinBot(WebBot):
 
         logger.info(f'Adding universe criteria\n{self.str_uni_criteria(criteria=criteria)}')
 
+        if self.remove_min_market_cap:
+            # by default there is a minimum USD 50 million market cap filter applied
+            self.click_button('/html/body/div[3]/div/div[2]/div/div[2]/div/div/div[3]/div[1]/div/div[2]/div[3]/div/div/div/div/div/div[1]/span[1]/div/div/div[1]/span[1]/i')
+
         # loop through each criteria (e.g. 'country') and add the specified items (e.g. 'sweden') per criteria
         criteria_num = 1
         for criteria, items in criteria.items():
             # add a universe criteria
             self.click_button(
                 f'/html/body/div[{min(3 + self._screen_number * 2, 5)}]/div/div[2]/div/div[2]/div/div/div[3]/div[1]/div/div[1]/div[3]/div/div/button/label'
-                # f'/html/body/div[3]/div/div[2]/div/div[2]/div/div/div[3]/div[1]/div/div[1]/div[3]/div/div/button/label'
-                # ' /html/body/div[5                                ]/div/div[2]/div/div[2]/div/div/div[3]/div[1]/div/div[1]/div[3]/div/div/button/label'
             )
             self.bot_sleep(3)
 
@@ -243,15 +250,51 @@ class KoyfinBot(WebBot):
         self._screen_number += 1
         self.bot_sleep(5)
 
-    def select_top_screen_view(self):
+    def add_data_columns(self, data_columns_config: dict):
         """
-        Clicks the Screen View button and selects the first view under 'My Views'
+        Edits the data columns and adds relevant data specified in a dictionary
+        :param data_columns_config: dict
+            keys = str name of the data
+            value = str or list of str format of the data (e.g. 'Last Twelve Months'). If not format (e.g. 'Industry'
+            set value to None)
         :return:
         """
-        logger.info('Select the screen view that is on the top of the list')
-        self.click_button(x_path='//*[@id="root"]/div[1]/section/div[2]/div[2]/div[1]/div[1]/div/div/div[2]/div[2]/div[1]/div/button[1]/label')
-        self.click_button(x_path='/html/body/div[4]/div/div/div/div[2]/div/div[2]/div[1]/div/div/span[2]/i')
-        self.bot_sleep(3)
+        logger.info('Edit data columns')
+        # click 'edit columns'
+        self.click_button(
+            '//*[@id="root"]/div[1]/section/div[2]/div[2]/div[1]/div[1]/div/div/div[2]/div[2]/div[2]/button[1]/span/i')
+
+        search_bar = self.driver.execute_script("return document.activeElement")
+
+        # loop through each data and type
+        for data_name, data_metas in data_columns_config.items():
+            logger.info(f"Lookup '{data_name}'")
+            search_bar.send_keys(data_name)  # insert the name of the data in the search bar
+            self.bot_sleep(3)
+            self.click_button('//*[@id="koy-data-source-item-0"]/div[1]/div[2]/div[1]')  # select the top element
+
+            # if we are only adding data that does not have any transformation (like 'Sector') col_vals is None
+            if data_metas:
+                # first convert data meta to a list if not already
+                if not isinstance(data_metas, list):
+                    data_metas = [data_metas]
+                for data_meta in data_metas:
+                    logger.info(f"{data_meta} ({data_name})")
+                    data_meta_element = self.driver.find_element(By.XPATH, f"//*[contains(text(),'{data_meta}')]")
+                    data_meta_element.click()
+                    self.bot_sleep(2)
+
+                # press the 'back' button to go back to the search bar (only used when the data requires additional
+                # inputs like data format)
+                self.click_button(
+                    '/html/body/div[4]/div/div[2]/div/div[2]/div/section/div[2]/div[2]/div/div[1]/div/button/label')
+
+            # clear all elements in search bar
+            search_bar.send_keys(Keys.CONTROL + "a")
+            search_bar.send_keys(Keys.DELETE)
+
+        # click 'x'
+        self.click_button('/html/body/div[4]/div/div[2]/div/div[2]/button/div/span/i')
 
     def download_screener_result(self):
         """
@@ -290,7 +333,7 @@ class KoyfinDataDownloader:
     def __init__(self, screen_criteria: {dict, list}):
         self.screen_criteria = screen_criteria
 
-    def download_data(self) -> None:
+    def download_data(self, data_config: dict = None) -> None:
         """
         Launches a Koyfin bot and downloads data according to specified criteria screener. The result will be in csv
         files in the downloads folder
@@ -312,8 +355,7 @@ class KoyfinDataDownloader:
                 kf_bot.click_modify_criteria(prev_num_uni_criteria=len(self.screen_criteria[i - 1]))
             kf_bot.add_universe_criteria(criteria=screen)
             kf_bot.run_screener()
-            if i == 0:
-                kf_bot.select_top_screen_view()
+            kf_bot.add_data_columns(data_columns_config=data_config)
             kf_bot.download_screener_result()
 
     def get_latest_downloaded_data_df(self) -> pd.DataFrame:
@@ -345,7 +387,7 @@ class KoyfinDataDownloader:
         if not save_folder_path:
             save_folder_path = KOYFIN_DATA_FOLDER_PATH
         else:
-            save_folder_path = Path(KOYFIN_DATA_FOLDER_PATH)
+            save_folder_path = Path(save_folder_path)
         if not file_name:
             file_name = f'koyfin_data_{datetime.date.today().strftime("%Y%m%d")}'
         save_file_path = save_folder_path / f'{file_name}.csv'
@@ -364,7 +406,4 @@ class KoyfinDataDownloader:
             self._screen_criteria = [screen_criteria]
         else:
             raise ValueError("screen_criteria can only be specified as a dict or list of dict")
-
-
-
 
