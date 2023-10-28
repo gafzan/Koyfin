@@ -15,13 +15,13 @@ data = {
 
 bot = KoyfinBot()  # initialize an instance of a KoyfinBot object
 bot.login()  # insert your credentials
-bot.go_to_my_screens()  # goes to the 'My Screens' page
-bot.add_new_screen()
-bot.name_screen(name='KoyfinBot demo')
-bot.add_universe_criteria(criteria=criteria)
-bot.run_screener()
-bot.add_data_columns(data_columns_config=data)
-bot.download_screener_result()  # the csv file will be stored under 'Downloads'
+bot._go_to_my_screens()  # goes to the 'My Screens' page
+bot._add_new_screen()
+bot._name_screen(name='KoyfinBot demo')
+bot._set_universe_criteria(criteria_config=criteria)
+bot._create_screen()
+bot._add_data_columns(data_columns_config=data)
+bot._download_screener_result()  # the csv file will be stored under 'Downloads'
 bot.driver.close()
 
 
