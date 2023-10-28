@@ -2,3 +2,5 @@ pandas
 selenium
 numpy
 xlsxwriter
+matplotlib
+seaborn

@@ -1,4 +1,5 @@
 examples/
+data/
 tools/excel_tools.py
 
 # Byte-compiled / optimized / DLL files
