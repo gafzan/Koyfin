@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 logger.addHandler(stream_handler)
 logger.setLevel(logging.INFO)
 
-
 sns.set_style('darkgrid')
 CROSS_SECTIONAL_DATA_FILE_PATH = get_project_root() / "data/company_fundamentals.csv"
 
@@ -56,7 +55,7 @@ class KoyfinAnalyst:
         self.company = company
         self._koyfin_bot = KoyfinBot
 
-    def set_financial_reports(self) -> None:
+    def set_financial_reports(self, add_non_cash_wc: bool = True) -> None:
         """
         Sets financial report attributes if the data folder exists else an error is raised
         :return: None
@@ -72,6 +71,8 @@ class KoyfinAnalyst:
         days = self.days_since_last_report_date()
         if days > 120:
             logger.warning(f"Number of days since last reporting date is {days}. Consider download new data.")
+        if add_non_cash_wc:
+            self.add_non_cash_working_capital()
         return
 
     def _read_financial_reports_csv(self, company_folder_path) -> None:
@@ -80,15 +81,24 @@ class KoyfinAnalyst:
         :param company_folder_path: path to the folder containing the financial report files
         :return: None
         """
-        self.balance_sheet_fy_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'balance_sheet_fy.csv', index_col=0))
-        self.income_statement_fy_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'income_statement_fy.csv', index_col=0))
-        self.cash_flow_fy_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'cash_flow_fy.csv', index_col=0))
-        self.balance_sheet_fq_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'balance_sheet_fq.csv', index_col=0))
-        self.income_statement_fq_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'income_statement_fq.csv', index_col=0))
-        self.cash_flow_fq_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'cash_flow_fq.csv', index_col=0))
-        self.balance_sheet_ltm_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'balance_sheet_ltm.csv', index_col=0))
-        self.income_statement_ltm_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'income_statement_ltm.csv', index_col=0))
-        self.cash_flow_ltm_df = self._convert_report_to_numeric_df(pd.read_csv(company_folder_path / 'cash_flow_ltm.csv', index_col=0))
+        self.balance_sheet_fy_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'balance_sheet_fy.csv', index_col=0))
+        self.income_statement_fy_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'income_statement_fy.csv', index_col=0))
+        self.cash_flow_fy_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'cash_flow_fy.csv', index_col=0))
+        self.balance_sheet_fq_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'balance_sheet_fq.csv', index_col=0))
+        self.income_statement_fq_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'income_statement_fq.csv', index_col=0))
+        self.cash_flow_fq_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'cash_flow_fq.csv', index_col=0))
+        self.balance_sheet_ltm_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'balance_sheet_ltm.csv', index_col=0))
+        self.income_statement_ltm_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'income_statement_ltm.csv', index_col=0))
+        self.cash_flow_ltm_df = self._convert_report_to_numeric_df(
+            pd.read_csv(company_folder_path / 'cash_flow_ltm.csv', index_col=0))
         return
 
     @staticmethod
@@ -98,7 +108,8 @@ class KoyfinAnalyst:
         :param report_df: DataFrame
         :return: DataFrame
         """
-        report_df.loc[~(report_df.Section == 'Date'), report_df.columns[2:]] = report_df.loc[~(report_df.Section == 'Date'), report_df.columns[2:]].astype(float)
+        report_df.loc[~(report_df.Section == 'Date'), report_df.columns[2:]] = report_df.loc[
+            ~(report_df.Section == 'Date'), report_df.columns[2:]].astype(float)
         return report_df
 
     def download_financial_reports(self, overwrite: bool = False) -> None:
@@ -120,7 +131,8 @@ class KoyfinAnalyst:
         for code, report_name in report_codes.items():
             # download from koyfin
             # dict format with the report type as keys and DataFrame as values
-            report = bot.fa_get_financial_report_df(company=self.company, financial_analysis_code=code, report_type=report_types)
+            report = bot.fa_get_financial_report_df(company=self.company, financial_analysis_code=code,
+                                                    report_type=report_types)
             reports[report_name] = report
         bot.driver.close()
 
@@ -146,7 +158,8 @@ class KoyfinAnalyst:
         return
 
     @staticmethod
-    def _add_new_data_to_financial_report(new_report_df: pd.DataFrame, existing_report_df: pd.DataFrame) -> pd.DataFrame:
+    def _add_new_data_to_financial_report(new_report_df: pd.DataFrame,
+                                          existing_report_df: pd.DataFrame) -> pd.DataFrame:
         """
         Returns a DataFrame that has added the new columns in 'new_report_df' to 'existing_report_df' merged on 'Item'
         and 'Section' columns
@@ -189,7 +202,8 @@ class KoyfinAnalyst:
         """
         if self.income_statement_ltm_df is None:
             raise ValueError('No income statement T12M has been set')
-        latest_report_date_str = self.income_statement_ltm_df[self.income_statement_ltm_df.Item == 'Report Date'].iloc[0, -1]
+        latest_report_date_str = self.income_statement_ltm_df[self.income_statement_ltm_df.Item == 'Report Date'].iloc[
+            0, -1]
         days = (datetime.datetime.today() - parser.parse(latest_report_date_str)).days
         return days
 
@@ -208,21 +222,69 @@ class KoyfinAnalyst:
         :return: None
         """
         # calculate EBIT margin estimates
-        self.comparables_df['EBIT Margin - Est Avg (NTM)'] = self.comparables_df['EBIT - Est Avg (NTM)'] / self.comparables_df['Revenues - Est Avg (NTM)'] * 100
-        self.comparables_df['EBIT Margin - Est Avg (FY1E)'] = self.comparables_df['EBIT - Est Avg (FY1E)'] / self.comparables_df['Revenues - Est Avg (FY1E)'] * 100
-        self.comparables_df['EBIT Margin - Est Avg (FY2E)'] = self.comparables_df['EBIT - Est Avg (FY2E)'] / self.comparables_df['Revenues - Est Avg (FY2E)'] * 100
-        self.comparables_df['EBIT Margin - Est Avg (FY3E)'] = self.comparables_df['EBIT - Est Avg (FY3E)'] / self.comparables_df['Revenues - Est Avg (FY3E)'] * 100
+        self.comparables_df['EBIT Margin - Est Avg (NTM)'] = self.comparables_df['EBIT - Est Avg (NTM)'] / \
+                                                             self.comparables_df['Revenues - Est Avg (NTM)'] * 100
+        self.comparables_df['EBIT Margin - Est Avg (FY1E)'] = self.comparables_df['EBIT - Est Avg (FY1E)'] / \
+                                                              self.comparables_df['Revenues - Est Avg (FY1E)'] * 100
+        self.comparables_df['EBIT Margin - Est Avg (FY2E)'] = self.comparables_df['EBIT - Est Avg (FY2E)'] / \
+                                                              self.comparables_df['Revenues - Est Avg (FY2E)'] * 100
+        self.comparables_df['EBIT Margin - Est Avg (FY3E)'] = self.comparables_df['EBIT - Est Avg (FY3E)'] / \
+                                                              self.comparables_df['Revenues - Est Avg (FY3E)'] * 100
 
         # capital to sales ratio as the ratio of the sum of net debt (cash subtracted) and equity and revenues
-        self.comparables_df['Capital Sales Ratio'] = self.comparables_df[['Net Debt (LTM)', 'Total Equity (LTM)']].sum(axis=1) / self.comparables_df['Total Revenues (LTM)'].values
+        self.comparables_df['Capital Sales Ratio'] = self.comparables_df[['Net Debt (LTM)', 'Total Equity (LTM)']].sum(
+            axis=1) / self.comparables_df['Total Revenues (LTM)'].values
 
         # reinvestments as CAPEX + Acquisitions - D&A + Change in WC
         # 'Capital Expenditure (LTM)' and 'Cash Acquisitions (LTM)' are already negative so they are here subtracted
-        self.comparables_df['Reinvestment'] = self.comparables_df['Chg in NWC (LTM)'] - self.comparables_df[['Capital Expenditure (LTM)', 'Cash Acquisitions (LTM)', 'D&A for EBITDA (LTM)']].fillna(0).sum(
+        self.comparables_df['Reinvestment'] = self.comparables_df['Chg in NWC (LTM)'] - self.comparables_df[
+            ['Capital Expenditure (LTM)', 'Cash Acquisitions (LTM)', 'D&A for EBITDA (LTM)']].fillna(0).sum(
             axis=1).values
-        self.comparables_df['Reinvestment Per Revenue'] = self.comparables_df['Reinvestment'] / self.comparables_df['Total Revenues (LTM)'].values
-        self.comparables_df['Reinvestment Per Revenue'] *= 100
+        self.comparables_df['Reinvestment Per Revenue (%)'] = self.comparables_df['Reinvestment'] / self.comparables_df[
+            'Total Revenues (LTM)'].values
+        self.comparables_df['Reinvestment Per Revenue (%)'] *= 100
+
+        self._add_historical_ebit_mrg()
         return
+
+    def _add_historical_ebit_mrg(self) -> None:
+        """
+        Adds historical EBIT margins implied from CAGR and the median and mean
+        EBIT Margin % (1Y TTM), EBIT Margin % (2Y TTM), ... EBIT Margin % (10Y TTM) for 1, 2, 3, 5, 7, 10 years
+        EBIT Margin % (Median TTM), EBIT Margin % (Mean TTM)
+        Note that the CAGR will always be in the reporting currency so if you are using cross sectional in a
+        different currency that the reporting one the implied historical EBIT and Revenue will be impacted by FX but
+        it will cancel out when calculating the ratio of the two
+        :return: None
+        """
+        # add historical levels of EBIT margins implicit from the CAGRs
+        years = [1, 2, 3, 5, 7, 10]
+        for y in years:
+            hist_revenue_df = self._historical_fundamental_data(data_name='Total Revenues', year_lag=y)
+            hist_ebit_df = self._historical_fundamental_data(data_name='EBIT', year_lag=y)
+            self.comparables_df.loc[:, f'EBIT Margin % ({y}Y TTM)'] = (
+                                                                                  hist_ebit_df.values / hist_revenue_df.values) * 100
+
+        # calculate historical mean and median for EBIT Margin %
+        hist_ebit_mrg_col_names = [f'EBIT Margin % ({y}Y TTM)' for y in years]
+        hist_ebit_mrg_col_names.append('EBIT Margin % (LTM)')
+        self.comparables_df.loc[:, 'EBIT Margin % (Median TTM)'] = self.comparables_df.loc[:,
+                                                                   hist_ebit_mrg_col_names].median(axis=1)
+        self.comparables_df.loc[:, 'EBIT Margin % (Mean TTM)'] = self.comparables_df.loc[:,
+                                                                 hist_ebit_mrg_col_names].mean(axis=1)
+        return
+
+    def _historical_fundamental_data(self, data_name: str, year_lag: int) -> pd.DataFrame:
+        """
+        Returns a DataFrame with the historical amounts implicit from the CAGR
+        CAGR = (Amount[T]/Amount[0])^(1/T)-1
+        Amount[0] = Amount[T]/(1+CAGR)^T
+        :param data_name: str
+        :param year_lag: int
+        :return: DataFrame
+        """
+        return self.comparables_df[f"{data_name} (LTM)"] / (
+                    (1 + self.comparables_df[f"{data_name}/CAGR ({year_lag}Y TTM)"].values / 100) ** year_lag)
 
     # __________________________________________________________________________________________________________________
     # accounting adjustments
@@ -239,7 +301,8 @@ class KoyfinAnalyst:
 
         # remove the rows for R&D asset and amortization if they exists
         self.balance_sheet_fy_df = self.balance_sheet_fy_df.loc[~(self.balance_sheet_fy_df.Item == 'R&D Asset')]
-        self.income_statement_fy_df = self.income_statement_fy_df.loc[~(self.income_statement_fy_df.Item == 'R&D Amortization')]
+        self.income_statement_fy_df = self.income_statement_fy_df.loc[
+            ~(self.income_statement_fy_df.Item == 'R&D Amortization')]
 
         # extract the R&D expenses into a DataFrame and transpose the result
         rnd_df = self.income_statement_fy_df[self.income_statement_fy_df.Item == 'R&D Expenses'].iloc[:, 2:].T
@@ -274,8 +337,10 @@ class KoyfinAnalyst:
         rnd_df['Section'] = 'Accounting Adjustments'
 
         # add the new data to the income statement and balance sheet
-        self.income_statement_fy_df = pd.concat([self.income_statement_fy_df, rnd_df[rnd_df.Item == 'R&D Amortization']], ignore_index=True, sort=False)
-        self.balance_sheet_fy_df = pd.concat([self.balance_sheet_fy_df, rnd_df[rnd_df.Item == 'R&D Asset']], ignore_index=True, sort=False)
+        self.income_statement_fy_df = pd.concat(
+            [self.income_statement_fy_df, rnd_df[rnd_df.Item == 'R&D Amortization']], ignore_index=True, sort=False)
+        self.balance_sheet_fy_df = pd.concat([self.balance_sheet_fy_df, rnd_df[rnd_df.Item == 'R&D Asset']],
+                                             ignore_index=True, sort=False)
         self._add_research_and_development_to_quarterly_reports()
         self._rnd_is_capitalized = True
         return
@@ -286,31 +351,36 @@ class KoyfinAnalyst:
         :return: None
         """
         if self.balance_sheet_fq_df is not None:
-            self.balance_sheet_fq_df = self._add_research_and_development_to_quarterly_report(quarterly_report_df=self.balance_sheet_fq_df,
-                                                                                              fiscal_year_report_df=self.balance_sheet_fy_df,
-                                                                                              item='R&D Asset')
+            self.balance_sheet_fq_df = self._add_research_and_development_to_quarterly_report(
+                quarterly_report_df=self.balance_sheet_fq_df,
+                fiscal_year_report_df=self.balance_sheet_fy_df,
+                item='R&D Asset')
         if self.balance_sheet_ltm_df is not None:
-            self.balance_sheet_ltm_df = self._add_research_and_development_to_quarterly_report(quarterly_report_df=self.balance_sheet_ltm_df,
-                                                                                              fiscal_year_report_df=self.balance_sheet_fy_df,
-                                                                                              item='R&D Asset')
+            self.balance_sheet_ltm_df = self._add_research_and_development_to_quarterly_report(
+                quarterly_report_df=self.balance_sheet_ltm_df,
+                fiscal_year_report_df=self.balance_sheet_fy_df,
+                item='R&D Asset')
         if self.income_statement_fq_df is not None:
-            self.income_statement_fq_df = self._add_research_and_development_to_quarterly_report(quarterly_report_df=self.income_statement_fq_df,
-                                                                                              fiscal_year_report_df=self.income_statement_fy_df,
-                                                                                              item='R&D Amortization')
+            self.income_statement_fq_df = self._add_research_and_development_to_quarterly_report(
+                quarterly_report_df=self.income_statement_fq_df,
+                fiscal_year_report_df=self.income_statement_fy_df,
+                item='R&D Amortization')
             # approximate the cost per quarter by dividing the annual amortization expense by 4
             self.income_statement_fq_df.loc[
                 self.income_statement_fq_df.Item == 'R&D Amortization',
                 self.income_statement_fq_df.columns[2:]
             ] /= 4
         if self.income_statement_ltm_df is not None:
-            self.income_statement_ltm_df = self._add_research_and_development_to_quarterly_report(quarterly_report_df=self.income_statement_ltm_df,
-                                                                                              fiscal_year_report_df=self.income_statement_fy_df,
-                                                                                              item='R&D Amortization')
+            self.income_statement_ltm_df = self._add_research_and_development_to_quarterly_report(
+                quarterly_report_df=self.income_statement_ltm_df,
+                fiscal_year_report_df=self.income_statement_fy_df,
+                item='R&D Amortization')
         return
 
     @staticmethod
     def _add_research_and_development_to_quarterly_report(quarterly_report_df: pd.DataFrame,
-                                                          fiscal_year_report_df: pd.DataFrame, item: str) -> pd.DataFrame:
+                                                          fiscal_year_report_df: pd.DataFrame,
+                                                          item: str) -> pd.DataFrame:
         """
         Returns a DataFrame with a new row relaed to R&D based on the annual values from a fiscal year financial report
         DataFrame
@@ -333,7 +403,7 @@ class KoyfinAnalyst:
 
         # combine the R&D DataFrame with the original fiscal quarter report
         quarterly_report_df = pd.concat([quarterly_report_df, rnd_fq_df], ignore_index=True,
-                                                    sort=False)
+                                        sort=False)
         # forward fill the empty cells for Q1, Q2 and Q3 to be the previous Q4
         quarterly_report_df.loc[
             quarterly_report_df.Item == item,
@@ -361,7 +431,8 @@ class KoyfinAnalyst:
         :return: DataFrame
         """
         # remove the item rows in case the they already exists
-        mask = balance_sheet_df.Item.isin(['Non Cash Current Asset', 'Non Debt Current Liabilities', 'Non Cash Working Capital'])
+        mask = balance_sheet_df.Item.isin(
+            ['Non Cash Current Asset', 'Non Debt Current Liabilities', 'Non Cash Working Capital'])
         balance_sheet_df = balance_sheet_df.loc[~mask]
 
         # list the names of accounting items classified as non cash current assets and non debt current liabilities
@@ -370,10 +441,11 @@ class KoyfinAnalyst:
                              'Unearned Revenue Current / Total', 'Other Current Liabilities']
 
         # calculate working capital and store it in a DataFrame
-        non_cash_wc_df = balance_sheet_df[balance_sheet_df.Item.isin(non_cash_ca_items)].iloc[:, 2:]\
+        non_cash_wc_df = balance_sheet_df[balance_sheet_df.Item.isin(non_cash_ca_items)].iloc[:, 2:] \
             .sum().to_frame('Non Cash Current Asset')
         non_cash_wc_df['Non Debt Current Liabilities'] = \
-            balance_sheet_df[balance_sheet_df.Item.isin(non_debt_cl_items)].iloc[:, 2:].sum()  # sum the numeric value columns
+            balance_sheet_df[balance_sheet_df.Item.isin(non_debt_cl_items)].iloc[:,
+            2:].sum()  # sum the numeric value columns
         non_cash_wc_df['Non Cash Working Capital'] = non_cash_wc_df['Non Cash Current Asset'].values - non_cash_wc_df[
             'Non Debt Current Liabilities'].values
         non_cash_wc_df = non_cash_wc_df.T.reset_index().rename(columns={'index': 'Item'})
@@ -435,7 +507,8 @@ class KoyfinAnalyst:
         else:
             return self.comparables_df.copy()
 
-    def get_percentile_data_for_company(self, comparables_df: pd.DataFrame, data_col_name: str, as_quartile: bool) -> float:
+    def get_percentile_ranking_for_company(self, comparables_df: pd.DataFrame, data_col_name: str,
+                                           as_quartile: bool) -> float:
         """
         Returns the percentile for the company for a specified data
         :param comparables_df: DataFrame
@@ -447,6 +520,7 @@ class KoyfinAnalyst:
         comparables_df = comparables_df.copy()
         comparables_df.columns = comparables_df.columns.str.title()
         hist_proxy_data_name = data_col_name.title()
+
         # log a warning if there are few historical data
         if comparables_df[hist_proxy_data_name.title()].count() < 5:
             logger.warning(
@@ -470,7 +544,8 @@ class KoyfinAnalyst:
         if capitalize_rnd:
             capital_items.append('R&D Asset')
         capital = self.get_balance_sheet_item(item=capital_items, report_type=reporting_type)
-        result = capital.sum(axis=1).div(self.get_income_statement_item(item='Total Revenues', report_type=reporting_type)['Total Revenues'])
+        result = capital.sum(axis=1).div(
+            self.get_income_statement_item(item='Total Revenues', report_type=reporting_type)['Total Revenues'])
         result.columns = ['Capital to Sales Ratio']
         return result
 
@@ -483,11 +558,33 @@ class KoyfinAnalyst:
         """
         is_df = self.get_income_statement_item(item=['EBIT', 'Total Revenues'], report_type=reporting_type)
         if capitalize_rnd:
-            rnd_df = self.get_income_statement_item(item=['R&D Expenses', 'R&D Amortization'], report_type=reporting_type)
+            rnd_df = self.get_income_statement_item(item=['R&D Expenses', 'R&D Amortization'],
+                                                    report_type=reporting_type)
             is_df = pd.concat([is_df, rnd_df], axis=1)
             is_df['EBIT'] += (is_df['R&D Expenses'] - is_df['R&D Amortization']).fillna(0)
         is_df['EBIT Margin'] = is_df['EBIT'] / is_df['Total Revenues'].values
         return is_df[['EBIT Margin']]
+
+    def get_hist_rnd_ebit_margin_impact(self) -> float:
+        """
+        Returns the historical difference between EBIT margin after capitalizing R&D expenses. Calculates median of
+        historical differneces in LTM EBIT margins
+        :return: float
+        """
+        if not self.rnd_is_capitalized:
+            logger.info("R&D is not capitalized so the EBIT margin impact is zero")
+            return 0
+        else:
+            # calculate median difference of EBIT margins before & after R&D capitalization
+            ebit_mrg_adj = self.get_ebit_margin(capitalize_rnd=True, reporting_type='ltm')
+            ebit_mrg_as_reported = self.get_ebit_margin(capitalize_rnd=False, reporting_type='ltm')
+            result = (ebit_mrg_adj - ebit_mrg_as_reported).replace(0, np.nan).iloc[:, 0].median(skipna=True)
+            if np.isnan(result):
+                # when all margins are the same
+                logger.info("R&D impact on EBIT margins is zero (perhaps no R&D expenses available)")
+                return 0
+            else:
+                return result
 
     def get_effective_tax_rate(self, reporting_type: str) -> pd.DataFrame:
         """
@@ -497,7 +594,8 @@ class KoyfinAnalyst:
         :param reporting_type: str
         :return: DataFrame
         """
-        is_df = self.get_income_statement_item(item=['EBT / Incl. Unusual Items', 'Income Tax Expense'], report_type=reporting_type)
+        is_df = self.get_income_statement_item(item=['EBT / Incl. Unusual Items', 'Income Tax Expense'],
+                                               report_type=reporting_type)
         is_df['Effective Tax Rate'] = is_df['Income Tax Expense'] / is_df['EBT / Incl. Unusual Items'].values
         return is_df[['Effective Tax Rate']]
 
@@ -519,19 +617,22 @@ class KoyfinAnalyst:
         )
 
         # calculate reinvestment
-        result_df['Gross Reinvestment'] = result_df[['Capital Expenditure', 'Cash Acquisitions', 'Change Non Cash Working Capital']].sum(axis=1)
+        result_df['Gross Reinvestment'] = result_df[
+            ['Capital Expenditure', 'Cash Acquisitions', 'Change Non Cash Working Capital']].sum(axis=1)
         result_df['Reinvestment'] = result_df['Gross Reinvestment'] - result_df['D&A for EBITDA'].fillna(0).values
 
         if capitalize_rnd:
             result_df = pd.concat(
                 [
                     result_df,
-                    self.get_income_statement_item(item=['R&D Expenses','R&D Amortization'], report_type=reporting_type)
+                    self.get_income_statement_item(item=['R&D Expenses', 'R&D Amortization'],
+                                                   report_type=reporting_type)
                 ],
                 axis=1
             )
             result_df['Gross Reinvestment'] += result_df['R&D Expenses'].fillna(0).values
-            result_df['Reinvestment'] += result_df['R&D Expenses'].fillna(0).values - result_df['R&D Amortization'].fillna(0).values
+            result_df['Reinvestment'] += result_df['R&D Expenses'].fillna(0).values - result_df[
+                'R&D Amortization'].fillna(0).values
 
             # move reinvestment columns to the right
             result_df.insert(result_df.shape[1] - 1, 'Gross Reinvestment', result_df.pop('Gross Reinvestment'))
@@ -542,7 +643,8 @@ class KoyfinAnalyst:
         else:
             return result_df[['Reinvestment']]
 
-    def get_reinvestments_per_revenue(self, capitalize_rnd: bool, reporting_type: str, with_details: bool = False) -> pd.DataFrame:
+    def get_reinvestments_per_revenue(self, capitalize_rnd: bool, reporting_type: str,
+                                      with_details: bool = False) -> pd.DataFrame:
         """
         Returns a DataFrame with gross and net reinvestment and its components if specified with respect to revenues
         :param capitalize_rnd: bool if True, treat R&D as a capital and not an operational expense
@@ -550,7 +652,8 @@ class KoyfinAnalyst:
         :param with_details: bool if True returns a larger DataFrame with the components
         :return: DataFrame
         """
-        reinv_df = self.get_reinvestment(capitalize_rnd=capitalize_rnd, reporting_type=reporting_type, with_details=with_details)
+        reinv_df = self.get_reinvestment(capitalize_rnd=capitalize_rnd, reporting_type=reporting_type,
+                                         with_details=with_details)
         reinv_df /= self.get_income_statement_item(item='Total Revenues', report_type=reporting_type).values
         return reinv_df
 
@@ -569,7 +672,8 @@ class KoyfinAnalyst:
         result.columns = ['Change Non Cash Working Capital']
         return result
 
-    def get_interest_coverage_ratio(self, report_type: str, avg_window: int = None, with_details: bool = False) -> pd.DataFrame:
+    def get_interest_coverage_ratio(self, report_type: str, avg_window: int = None,
+                                    with_details: bool = False) -> pd.DataFrame:
         """
         Returns a DataFrame with the interest coverage ratio (IRC) as well as the components is specified
         :param report_type: str
@@ -597,12 +701,15 @@ class KoyfinAnalyst:
         :return: DataFrame
         """
         ic = self.get_balance_sheet_item(item=['Net Debt', 'Total Equity'], report_type=report_type)
-        ebit = self.get_income_statement_item(item='EBIT', report_type=report_type) - self.get_income_statement_item(item='Income Tax Expense', report_type=report_type).values
+        ebit = self.get_income_statement_item(item='EBIT', report_type=report_type) - self.get_income_statement_item(
+            item='Income Tax Expense', report_type=report_type).values
         if capitalize_rnd:
             rnd_asset_df = self.get_balance_sheet_item(item='R&D Asset', report_type=report_type)
             ic = ic.join(rnd_asset_df)
-            ebit += self.get_income_statement_item(item='R&D Expenses', report_type=report_type).fillna(0).values * rnd_asset_df.notnull().astype(int).values
-            ebit -= self.get_income_statement_item(item='R&D Amortization', report_type=report_type).fillna(0).values * rnd_asset_df.notnull().astype(int).values
+            ebit += self.get_income_statement_item(item='R&D Expenses', report_type=report_type).fillna(
+                0).values * rnd_asset_df.notnull().astype(int).values
+            ebit -= self.get_income_statement_item(item='R&D Amortization', report_type=report_type).fillna(
+                0).values * rnd_asset_df.notnull().astype(int).values
         result = ebit.div(ic.sum(axis=1), axis=0)
         result.columns = ['ROIC']
         return result
@@ -624,7 +731,8 @@ class KoyfinAnalyst:
         """
         if accounting_statement_name.lower() == 'balance_sheet':
             raise ValueError("This script should only be used for 'income_statement' and 'cash_flow'")
-        reporting_item_fq_df = self._get_financial_report_item(financial_report_name=accounting_statement_name, report_type='fq',
+        reporting_item_fq_df = self._get_financial_report_item(financial_report_name=accounting_statement_name,
+                                                               report_type='fq',
                                                                item=item, normalize=False)
         reporting_item_fq_df['FY'] = [s.split(' ')[1] for s in reporting_item_fq_df.index]
         result = reporting_item_fq_df.groupby('FY').agg('sum').iloc[-1]
@@ -642,7 +750,8 @@ class KoyfinAnalyst:
         # combine all the relevant items from the income statement, balance sheet and cash flows into a DataFrame
         total_df = pd.concat(
             [
-                self.get_income_statement_item(item=['EBIT', 'Income Tax Expense', 'D&A for EBITDA'], report_type=reporting_type),
+                self.get_income_statement_item(item=['EBIT', 'Income Tax Expense', 'D&A for EBITDA'],
+                                               report_type=reporting_type),
                 self.get_change_non_cash_working_capital(report_type=reporting_type),
                 self.get_cash_flow_item(item=['Capital Expenditure', 'Cash Acquisitions'], report_type=reporting_type)
             ],
@@ -660,7 +769,8 @@ class KoyfinAnalyst:
         :param normalize: bool if True each amount is divided by total assets
         :return: DataFrame
         """
-        return self._get_financial_report_item(financial_report_name='balance_sheet', item=item, report_type=report_type, normalize=normalize)
+        return self._get_financial_report_item(financial_report_name='balance_sheet', item=item,
+                                               report_type=report_type, normalize=normalize)
 
     def get_income_statement_item(self, item: {str, list}, report_type: str, normalize: bool = False):
         """
@@ -670,7 +780,8 @@ class KoyfinAnalyst:
         :param normalize: bool if True each amount is divided by total revenues
         :return: DataFrame
         """
-        return self._get_financial_report_item(financial_report_name='income_statement', item=item, report_type=report_type, normalize=normalize)
+        return self._get_financial_report_item(financial_report_name='income_statement', item=item,
+                                               report_type=report_type, normalize=normalize)
 
     def get_cash_flow_item(self, item: {str, list}, report_type: str):
         """
@@ -679,9 +790,11 @@ class KoyfinAnalyst:
         :param report_type: str
         :return: DataFrame
         """
-        return self._get_financial_report_item(financial_report_name='cash_flow', item=item, report_type=report_type, normalize=False)
+        return self._get_financial_report_item(financial_report_name='cash_flow', item=item, report_type=report_type,
+                                               normalize=False)
 
-    def _get_financial_report_item(self, financial_report_name: str, item: {str, list}, report_type: str, normalize: bool) -> pd.DataFrame:
+    def _get_financial_report_item(self, financial_report_name: str, item: {str, list}, report_type: str,
+                                   normalize: bool) -> pd.DataFrame:
         """
         Returns one or more items from a specified financial account as a DataFrame
         :param financial_report_name: str
@@ -691,7 +804,8 @@ class KoyfinAnalyst:
         :return: DataFrame
         """
         # get the financial account DataFrame
-        financial_report_df = self._get_financial_report(financial_report_name=financial_report_name, report_type=report_type, normalize=normalize)
+        financial_report_df = self._get_financial_report(financial_report_name=financial_report_name,
+                                                         report_type=report_type, normalize=normalize)
 
         # convert to list of str with lower characters
         if isinstance(item, str):
@@ -704,7 +818,8 @@ class KoyfinAnalyst:
                 raise ValueError(f"'{i}' does not exists as a {financial_report_name.replace('_', ' ')} item")
 
         # transpose result and exclude the section name
-        item_idx = [list(financial_report_df.Item.str.lower()).index(i) for i in item]  # find the row index for each item
+        item_idx = [list(financial_report_df.Item.str.lower()).index(i) for i in
+                    item]  # find the row index for each item
         result_df = financial_report_df.iloc[item_idx].copy()
         result_df.set_index('Item', inplace=True)
         result_df.drop('Section', inplace=True, axis=1)
@@ -716,7 +831,8 @@ class KoyfinAnalyst:
         :param reporting_type: str
         :return: DataFrame
         """
-        return self._get_financial_report(financial_report_name='balance_sheet', report_type=reporting_type, normalize=True)
+        return self._get_financial_report(financial_report_name='balance_sheet', report_type=reporting_type,
+                                          normalize=True)
 
     def get_normalized_income_statement(self, reporting_type: str):
         """
@@ -724,7 +840,8 @@ class KoyfinAnalyst:
         :param reporting_type: str
         :return: DataFrame
         """
-        return self._get_financial_report(financial_report_name='income_statement', report_type=reporting_type, normalize=True)
+        return self._get_financial_report(financial_report_name='income_statement', report_type=reporting_type,
+                                          normalize=True)
 
     def _get_financial_report(self, financial_report_name: str, report_type: str, normalize: bool) -> pd.DataFrame:
         """
@@ -755,20 +872,23 @@ class KoyfinAnalyst:
         }
         result = financial_reports[financial_report_name][report_type.lower()]
         if result is None:
-            raise ValueError(f"'{financial_report_name}_{report_type.lower()}_df' is None for {self.company.upper()}\nCall set_financial_reports() to download the financial accounts.")
+            raise ValueError(
+                f"'{financial_report_name}_{report_type.lower()}_df' is None for {self.company.upper()}\nCall set_financial_reports() to download the financial accounts.")
 
         if normalize and financial_report_name in ['income_statement', 'balance_sheet']:
             # a dictionary with all the item names that should not be normalized (e.g. per share items)
             report_excl_item_map = {
-                'income_statement': ["Report Date", 'Period Ending', "Total Revenues / CAGR 1Y", "Gross Profit / CAGR 1Y",
-                                   "Net EPS - Basic", "Basic EPS - Continuing Operations",
-                                   "Basic Weighted Average Shares Outstanding", "Net EPS - Diluted",
-                                   "Diluted EPS - Continuing Operations",
-                                   "Diluted Weighted Average Shares Outstanding", "Normalized Basic EPS",
-                                   "Normalized Diluted EPS",
-                                   "Dividend Per Share", "Payout Ratio", "Effective Tax Rate - (Ratio)"],
+                'income_statement': ["Report Date", 'Period Ending', "Total Revenues / CAGR 1Y",
+                                     "Gross Profit / CAGR 1Y",
+                                     "Net EPS - Basic", "Basic EPS - Continuing Operations",
+                                     "Basic Weighted Average Shares Outstanding", "Net EPS - Diluted",
+                                     "Diluted EPS - Continuing Operations",
+                                     "Diluted Weighted Average Shares Outstanding", "Normalized Basic EPS",
+                                     "Normalized Diluted EPS",
+                                     "Dividend Per Share", "Payout Ratio", "Effective Tax Rate - (Ratio)"],
                 'balance_sheet': ["Report Date", 'Period Ending', "ECS Total Shares Outstanding on Filing Date",
-                                  "ECS Total Common Shares Outstanding", "Book Value / Share", "Tangible Book Value Per Share",
+                                  "ECS Total Common Shares Outstanding", "Book Value / Share",
+                                  "Tangible Book Value Per Share",
                                   "Tangible Book Value Per Share"]
             }
             normalizing_item = {
@@ -827,7 +947,8 @@ class KoyfinAnalyst:
                 i += 1
             # plot the estimated 2Y CAGR if there is enough analyst coverage
             if company_df['Price Target - #'].values[0] >= 3:
-                est_growth_df = company_df[['Est Rev CAGR (1Y)', 'Est Rev CAGR (2Y)', 'Est Rev CAGR (3Y)']].dropna(axis=1)
+                est_growth_df = company_df[['Est Rev CAGR (1Y)', 'Est Rev CAGR (2Y)', 'Est Rev CAGR (3Y)']].dropna(
+                    axis=1)
                 if not est_growth_df.empty:
                     est_col_name = est_growth_df.columns[-1]
                     est_col_name.replace('Rev ', '')
@@ -835,11 +956,13 @@ class KoyfinAnalyst:
                     growth_df[est_col_name] = est_growth_df.iloc[0, -1]
                     growth_df.plot(ax=ax, y=est_col_name, style='--', color='grey')
 
-        colors = ['g' if g > 0 else 'r' for g in growth_df[g_col_name].values]  # conditional color: red if negative, else green
+        colors = ['g' if g > 0 else 'r' for g in
+                  growth_df[g_col_name].values]  # conditional color: red if negative, else green
         growth_df.plot(ax=ax, y=g_col_name, kind='bar', color=colors, title='Revenue Growth (%)')
         return
 
-    def analyse_profitability(self, comparison: bool, capitalize_rnd: bool, classifier: str = None, report_type: str = 'ltm'):
+    def analyse_profitability(self, comparison: bool, capitalize_rnd: bool, classifier: str = None,
+                              report_type: str = 'ltm'):
         """
         Generate a plot with EBIT margin as a bar chart together with comparable median as well as 25 and 75%-iles
         Also if there are enough analysts covering the stock (proxy by number of price targets) also plot the expected
@@ -882,11 +1005,13 @@ class KoyfinAnalyst:
                 (self.comparables_df['Price Target - #'] >= min_price_target_num) &
                 (self.comparables_df.Ticker.str.lower() == self.company.lower())]
             if not analyst_filtered_df.empty:
-                est_ebit = analyst_filtered_df['EBIT - Est Avg (NTM)'].values[0] / analyst_filtered_df['Revenues - Est Avg (NTM)'].values[0]
+                est_ebit = analyst_filtered_df['EBIT - Est Avg (NTM)'].values[0] / \
+                           analyst_filtered_df['Revenues - Est Avg (NTM)'].values[0]
                 est_ebit *= 100
-                pd.DataFrame(data={f'EBIT Margin (NTM) {round(est_ebit, 2)}%': ebit_df.shape[0] * [est_ebit]}).plot(ax=ax,
-                                                                                                                 kind='line',
-                                                                                                                 linestyle='dashed')
+                pd.DataFrame(data={f'EBIT Margin (NTM) {round(est_ebit, 2)}%': ebit_df.shape[0] * [est_ebit]}).plot(
+                    ax=ax,
+                    kind='line',
+                    linestyle='dashed')
                 plt.xticks(rotation=90)  # rotate the x-axis labels
         return
 
@@ -902,7 +1027,8 @@ class KoyfinAnalyst:
         :param reporting_type: str
         :return: None
         """
-        df = self.get_reinvestments_per_revenue(capitalize_rnd=capitalize_rnd, reporting_type=reporting_type, with_details=True) * 100
+        df = self.get_reinvestments_per_revenue(capitalize_rnd=capitalize_rnd, reporting_type=reporting_type,
+                                                with_details=True) * 100
         gross_inv_items = ['Capital Expenditure', 'Cash Acquisitions', 'Change Non Cash Working Capital']
         maintenance_items = ['D&A for EBITDA']
         if capitalize_rnd:
@@ -910,13 +1036,14 @@ class KoyfinAnalyst:
             maintenance_items.append('R&D Amortization')
 
         # create a plot window with 4 subplots: gross reinvestment, maintenance, reinvestment (net) and capital-to-sales ratio
-        _, axes = plt.subplots(nrows=2, ncols=2, figsize=(10,5))
+        _, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 5))
         plt.tight_layout(pad=1.5, w_pad=0.8, h_pad=5.0)
 
-        df[gross_inv_items].plot(ax=axes[0 ,0], kind='bar', legend=True, title='Gross Reinvestment (% Revenue)')
-        df[maintenance_items].plot(ax=axes[0 ,1], kind='bar', legend=True, title='Maintenance (% Revenue)')
+        df[gross_inv_items].plot(ax=axes[0, 0], kind='bar', legend=True, title='Gross Reinvestment (% Revenue)')
+        df[maintenance_items].plot(ax=axes[0, 1], kind='bar', legend=True, title='Maintenance (% Revenue)')
         df['Reinvestment'].plot(ax=axes[1, 0], kind='line', title='Reinvestment (% Revenue)')
-        self.get_capital_to_revenue_ratio(capitalize_rnd=capitalize_rnd, reporting_type=reporting_type).plot(ax=axes[1, 1], kind='line', title='Capital-to-Sales ratio')
+        self.get_capital_to_revenue_ratio(capitalize_rnd=capitalize_rnd, reporting_type=reporting_type).plot(
+            ax=axes[1, 1], kind='line', title='Capital-to-Sales ratio')
 
         # if applicable add comparison looking at the median for reinvestment and capital to sales ratio using the
         # cross sectional data
@@ -926,8 +1053,11 @@ class KoyfinAnalyst:
             # add a column with the relevant metric and add the median together with 25 and 75%-ile
             reinv_comp_df = self._get_comparison_reinvestment_df()
             capital_sales_comp_df = self._get_comparison_capital_sales_ratio_df()
-            self._add_comparison_to_plot(plot=axes[1, 0], x_axis=df.index, df=reinv_comp_df, data_col_name='Reinvestment', classifier=classifier)
-            self._add_comparison_to_plot(plot=axes[1, 1], x_axis=df.index, df=capital_sales_comp_df, data_col_name='Capital Sales Ratio', classifier=classifier, median_legend_suffix='')
+            self._add_comparison_to_plot(plot=axes[1, 0], x_axis=df.index, df=reinv_comp_df,
+                                         data_col_name='Reinvestment', classifier=classifier)
+            self._add_comparison_to_plot(plot=axes[1, 1], x_axis=df.index, df=capital_sales_comp_df,
+                                         data_col_name='Capital Sales Ratio', classifier=classifier,
+                                         median_legend_suffix='')
         return
 
     def analyse_cash_flows(self, reporting_type: str):
@@ -942,12 +1072,14 @@ class KoyfinAnalyst:
 
         # plot the components as a stacked bar chart and add the sum as a line
         _, ax = plt.subplots()
-        total_df.loc[:, total_df.columns != 'FCFF'].plot(ax=ax, stacked=True, kind='bar', title='Free Cash Flow to Firm (FCFF)')
+        total_df.loc[:, total_df.columns != 'FCFF'].plot(ax=ax, stacked=True, kind='bar',
+                                                         title='Free Cash Flow to Firm (FCFF)')
         total_df[['FCFF']].plot(ax=ax, color='black', style='.--')
         plt.xticks(rotation=90)  # rotate the x-axis labels
         return
 
-    def _add_comparison_to_plot(self, plot, x_axis: pd.Index, df:pd.DataFrame, data_col_name: str, classifier: str, median_legend_suffix: str = '%') -> None:
+    def _add_comparison_to_plot(self, plot, x_axis: pd.Index, df: pd.DataFrame, data_col_name: str, classifier: str,
+                                median_legend_suffix: str = '%') -> None:
         """
         Adds the median among comparable stocks together with the 25 and 75%-ile
         :param plot:
@@ -989,7 +1121,8 @@ class KoyfinAnalyst:
         :return: DataFrame
         """
         df = self.comparables_df.copy()
-        df['Capital Sales Ratio'] = df[['Net Debt (LTM)', 'Total Equity (LTM)']].sum(axis=1) / df['Total Revenues (LTM)'].fillna(0).values
+        df['Capital Sales Ratio'] = df[['Net Debt (LTM)', 'Total Equity (LTM)']].sum(axis=1) / df[
+            'Total Revenues (LTM)'].fillna(0).values
         return df
 
     def _get_comparison_stats(self, df: pd.DataFrame, data_name: str, classifier: str, agg_method) -> pd.Series:
@@ -1017,6 +1150,41 @@ class KoyfinAnalyst:
             df = df[df[classifier] == classifier_for_ticker].copy()
         stats = df[data_name].replace(np.inf, np.nan).agg(agg_method)
         return stats
+
+    def get_peer_historical_ebit_mrg(self, peer_group: {str, None}='Industry',
+                                     data_name: str = 'EBIT Margin % (Median TTM)',
+                                     agg_method: str = 'median') -> float:
+        """
+        Returns the median of historical EBIT margins of the peer group
+        :param peer_group: str e.g. Sector if None there is no filter
+        :param data_name: str column data name
+        :param agg_method: str name of aggregating method
+        :return: float
+        """
+        return self.get_peer_historical_data(peer_group=peer_group, data_name=data_name, agg_method=agg_method)
+
+    def get_peer_historical_revenue_growth(self, peer_group: {str, None}='Industry',
+                                           data_name: str = 'Total Revenues/CAGR (5Y TTM)',
+                                           agg_method: str = 'median') -> float:
+        """
+        Returns the median of historical growth rates of the peer group
+        :param peer_group: str e.g. Sector if None there is no filter
+        :param data_name: str column data name
+        :param agg_method: str name of aggregating method
+        :return: float
+        """
+        return self.get_peer_historical_data(peer_group=peer_group, data_name=data_name, agg_method=agg_method)
+
+    def get_peer_historical_data(self, peer_group: {str, None}, data_name: {str, list},
+                                 agg_method: {str, list, dict}) -> {float, pd.Series}:
+        """
+        Returns aggregated filtered data based on peers
+        :param peer_group: str e.g. Sector if None there is no filter
+        :param data_name: str or list of str data column names
+        :param agg_method: str, list or dict
+        :return: float or pd.Series
+        """
+        return self.get_filtered_comparables_df(filter_by=peer_group)[data_name].agg(agg_method)
 
     def sector_comparision(self, data_columns: {str, list}) -> pd.DataFrame:
         """
@@ -1064,8 +1232,9 @@ class KoyfinAnalyst:
         # combine the aggregate data with the data for the ticker
         ticker_data = self.get_company_data()
         ticker_data.index = ticker_data.index.str.title()
-        result_df = pd.concat([pd.DataFrame(data=ticker_data[data_columns].values, index=data_columns, columns=[self.company]).T,
-                               result_df])
+        result_df = pd.concat(
+            [pd.DataFrame(data=ticker_data[data_columns].values, index=data_columns, columns=[self.company]).T,
+             result_df])
         return result_df
 
     @staticmethod
@@ -1085,11 +1254,14 @@ class KoyfinAnalyst:
         """
         return self.get_company_data()['Price Target - #'] >= self.min_num_price_target
 
-    def revenue_growth_forecast_analyst(self, terminal_growth_rate: float) -> list:
+    def revenue_growth_forecast_analyst(self, terminal_growth_rate: float, extend_analyst_est: bool,
+                                        mid_year_growth: {float, None}=None) -> list:
         """
         Returns a list of floats with annual revenue growth forecast based on analyst estimates that are extrapolated to
         the 5th fiscal year by the CAGR over first 3 years that later converges to a terminal growth rate at 10y
         :param terminal_growth_rate: float
+        :param extend_analyst_est: bool if True extrapolate the estimated growth rates for the first 3 to 5 years
+        :param mid_year_growth: float or None only has an impact if extend_analyst_est is False
         :return: list
         """
         # data for the specific ticker
@@ -1104,48 +1276,83 @@ class KoyfinAnalyst:
         est_fy2_g = company_data['Revenues - Est YoY % (FY2E)'] / 100
         est_fy3_g = company_data['Revenues - Est YoY % (FY3E)'] / 100
 
-        # extrapolate the estimated growth rates for the first 3 years to 5
-        estimates = np.array([est_fy1_g, est_fy2_g, est_fy3_g])
-        cagr = ((1 + estimates).prod()) ** (1 / len(estimates)) - 1
-        return self._three_stage_model(year_1=est_fy1_g, year_2=est_fy2_g, year_3=est_fy3_g, mid_year=cagr,
+        if extend_analyst_est:
+            # extrapolate the estimated growth rates for the first 3 years to 5
+            estimates = np.array([est_fy1_g, est_fy2_g, est_fy3_g])
+            mid_y_g = ((1 + estimates).prod()) ** (1 / len(estimates)) - 1
+            if mid_year_growth is not None:
+                logger.warning("'extend_analyst_est' is True so a specified 'mid_year_growth' has no effect")
+        else:
+            mid_y_g = mid_year_growth
+
+        return self._three_stage_model(year_1=est_fy1_g, year_2=est_fy2_g, year_3=est_fy3_g, mid_year=mid_y_g,
                                        terminal_year=terminal_growth_rate)
 
-    def revenue_growth_forecast_analyst_proxy(self, terminal_growth_rate: float, hist_proxy_data_name: str = 'Total Revenues/CAGR (5Y TTM)',
-                                              proxy_filter_by: {None, str}='Industry'):
+    def revenue_growth_forecast_analyst_proxy(self, terminal_growth_rate: float, extend_analyst_est: bool,
+                                              hist_proxy_data_name: str = 'Total Revenues/CAGR (5Y TTM)',
+                                              proxy_filter_by: {None, str}='Industry',
+                                              mid_year_growth: {float, None}=None):
         """
         Returns a list of floats with annual revenue growth forecast based on proxy analyst estimates that are
         extrapolated to the 5th fiscal year by the CAGR over first 3 years that later converges to a terminal growth
         rate at 10y. Proxy estimates are calculated by looking at the historical distribution of growth and use that
         same percentile (rounded to quarters) to approximate the analyst growth estimates. I.e. if the stock has been
         growing as the median firm, the median growth estimate is used.
+        :param terminal_growth_rate: float
+        :param extend_analyst_est: bool if True extrapolate the estimated growth rates for the first 3 to 5 years
         :param hist_proxy_data_name: str name of the data column to be used in the historical estimation
         :param proxy_filter_by: str filter comparables based on this (e.g. 'Industry') if None use the netire universe
-        :param terminal_growth_rate: float
+        :param mid_year_growth: float or None only has an impact if extend_analyst_est is False
         :return: list
         """
         # get the filtered comparable data
         comparables_df = self.get_filtered_comparables_df(filter_by=proxy_filter_by)
 
         # calculate the historical percentile for the specified data to be used to estimate the proxy
-        hist_pct_ile = self.get_percentile_data_for_company(comparables_df=comparables_df,
-                                                            data_col_name=hist_proxy_data_name, as_quartile=True)
+        hist_pct_ile = self.get_percentile_ranking_for_company(comparables_df=comparables_df,
+                                                               data_col_name=hist_proxy_data_name, as_quartile=True)
 
         # use the historical percentile to proxy the analyst estimates
         est_fy1_g = comparables_df['Est Rev CAGR (1Y)'].quantile(hist_pct_ile) / 100
         est_fy2_g = comparables_df['Revenues - Est YoY % (FY2E)'].quantile(hist_pct_ile) / 100
         est_fy3_g = comparables_df['Revenues - Est YoY % (FY3E)'].quantile(hist_pct_ile) / 100
 
-        # extrapolate the estimated growth rates for the first 3 years to 5
-        estimates = np.array([est_fy1_g, est_fy2_g, est_fy3_g])
-        cagr = ((1 + estimates).prod()) ** (1 / len(estimates)) - 1
-        return self._three_stage_model(year_1=est_fy1_g, year_2=est_fy2_g, year_3=est_fy3_g, mid_year=cagr,
+        if extend_analyst_est:
+            estimates = np.array([est_fy1_g, est_fy2_g, est_fy3_g])
+            cagr = ((1 + estimates).prod()) ** (1 / len(estimates)) - 1
+            mid_y_g = cagr
+            if mid_year_growth is not None:
+                logger.warning("'extend_analyst_est' is True so a specified 'mid_year_growth' has no effect")
+        else:
+            mid_y_g = mid_year_growth
+
+        return self._three_stage_model(year_1=est_fy1_g, year_2=est_fy2_g, year_3=est_fy3_g, mid_year=mid_y_g,
                                        terminal_year=terminal_growth_rate)
 
-    def ebit_mrg_forecast_analyst(self, terminal_ebit_mrg: float):
+    def revenue_forecast(self, revenue_growth_fy_forecast: {np.ndarray, list}) -> list:
+        """
+        Returns a list of Revenue amounts based on a specified annual revenue growth forecast
+        Note that the first element will only include the remaining amoung of the current FY revenue forecast i.e. the
+        year-to-date actual revenue sum will be subtracted from the FY forecast
+        :param revenue_growth_fy_forecast: list or array
+        :return: list
+        """
+        revenues_last_fy = self.get_income_statement_item('total revenues', 'fy').iloc[-1, 0]
+        # compounded growth rate based on previous FY revenues
+        revenues = (revenues_last_fy * (1 + np.array(revenue_growth_fy_forecast)).cumprod()).tolist()
+        revenues_ytd = self.get_revenue_ytd_sum()
+        revenues[0] -= revenues_ytd
+        return revenues
+
+    def ebit_mrg_forecast_analyst(self, terminal_ebit_mrg: float, extend_analyst_est: bool,
+                                  mid_year_margin: {float, None}=None, add_rnd_impact: bool = True):
         """
         Returns a list of floats with EBIT margin forecast based on analyst estimates that are extrapolated to the 5th
         fiscal year by the mean over first 3 years that later converges to a terminal margin at 10y
         :param terminal_ebit_mrg: float
+        :param extend_analyst_est: bool if True extrapolate the estimated margins for the first 3 to 5 years
+        :param mid_year_margin: float or None only has an impact if extend_analyst_est is False
+        :param add_rnd_impact: if R&D is capitalized the historical impact on margins is added to analyst estimate only
         :return: list
         """
         # data for the specific ticker
@@ -1156,14 +1363,26 @@ class KoyfinAnalyst:
             logger.warning(f"Only has {company_data['Price Target - #']} price targets")
 
         # enough price targets make the use of analyst estimates
-        est_fy1_mrg = company_data['EBIT Margin - Est Avg (FY1E)'] / 100
-        est_fy2_mrg = company_data['EBIT Margin - Est Avg (FY2E)'] / 100
-        est_fy3_mrg = company_data['EBIT Margin - Est Avg (FY3E)'] / 100
-        est_mrg_mid = np.mean([est_fy1_mrg, est_fy2_mrg, est_fy3_mrg])
+        if add_rnd_impact:
+            rnd_impact = self.get_hist_rnd_ebit_margin_impact()
+        else:
+            rnd_impact = 0
+        est_fy1_mrg = company_data['EBIT Margin - Est Avg (FY1E)'] / 100 + rnd_impact
+        est_fy2_mrg = company_data['EBIT Margin - Est Avg (FY2E)'] / 100 + rnd_impact
+        est_fy3_mrg = company_data['EBIT Margin - Est Avg (FY3E)'] / 100 + rnd_impact
+        if extend_analyst_est:
+            est_mrg_mid = np.mean([est_fy1_mrg, est_fy2_mrg, est_fy3_mrg])
+            if mid_year_margin is not None:
+                logger.warning("'extend_analyst_est' is True so a specified 'mid_year_margin' has no effect")
+        else:
+            est_mrg_mid = mid_year_margin
         return self._three_stage_model(year_1=est_fy1_mrg, year_2=est_fy2_mrg, year_3=est_fy3_mrg, mid_year=est_mrg_mid,
                                        terminal_year=terminal_ebit_mrg)
 
-    def ebit_mrg_forecast_analyst_proxy(self, terminal_ebit_mrg: float, proxy_filter_by: {None, str}='Industry') -> list:
+    def ebit_mrg_forecast_analyst_proxy(self, terminal_ebit_mrg: float, extend_analyst_est: bool,
+                                        hist_proxy_data_name: str = 'EBIT Margin % (Median TTM)',
+                                        proxy_filter_by: {None, str}='Industry',
+                                        mid_year_margin: {float, None}=None, add_rnd_impact: bool = True) -> list:
         """
         Returns a list of floats with EBIT margin forecast based on proxy analyst estimates that are extrapolated to the
         5th fiscal year by the mean over first 3 years that later converges to a terminal margin at 10y.
@@ -1171,21 +1390,35 @@ class KoyfinAnalyst:
         (rounded to quarters) to approximate the analyst estimates. I.e. if the stock has been profitable as the median
         firm, the median margin estimate is used.
         :param terminal_ebit_mrg: float
+        :param extend_analyst_est: bool if True extrapolate the estimated margins for the first 3 to 5 years
+        :param hist_proxy_data_name: str name of the data column to be used in the historical estimation
         :param proxy_filter_by: str
+        :param mid_year_margin: float or None only has an impact if extend_analyst_est is False
+        :param add_rnd_impact: if R&D is capitalized the historical impact on margins is added to analyst estimate only
         :return: list
         """
         # get the filtered comparable data
         comparables_df = self.get_filtered_comparables_df(filter_by=proxy_filter_by)
 
         # calculate the historical percentile for the specified data to be used to estimate the proxy
-        hist_pct_ile = self.get_percentile_data_for_company(comparables_df=comparables_df,
-                                                            data_col_name='EBIT Margin % (LTM)', as_quartile=True)
+        hist_pct_ile = self.get_percentile_ranking_for_company(comparables_df=comparables_df,
+                                                               data_col_name=hist_proxy_data_name, as_quartile=True)
 
         # use the historical percentile to proxy the analyst estimates
-        est_fy1_mrg = comparables_df['EBIT Margin - Est Avg (FY1E)'].quantile(hist_pct_ile) / 100
-        est_fy2_mrg = comparables_df['EBIT Margin - Est Avg (FY2E)'].quantile(hist_pct_ile) / 100
-        est_fy3_mrg = comparables_df['EBIT Margin - Est Avg (FY3E)'].quantile(hist_pct_ile) / 100
-        est_mrg_mid = np.mean([est_fy1_mrg, est_fy2_mrg, est_fy3_mrg])
+        if add_rnd_impact:
+            rnd_impact = self.get_hist_rnd_ebit_margin_impact()
+        else:
+            rnd_impact = 0
+        est_fy1_mrg = comparables_df['EBIT Margin - Est Avg (FY1E)'].quantile(hist_pct_ile) / 100 + rnd_impact
+        est_fy2_mrg = comparables_df['EBIT Margin - Est Avg (FY2E)'].quantile(hist_pct_ile) / 100 + rnd_impact
+        est_fy3_mrg = comparables_df['EBIT Margin - Est Avg (FY3E)'].quantile(hist_pct_ile) / 100 + rnd_impact
+
+        if extend_analyst_est:
+            est_mrg_mid = np.mean([est_fy1_mrg, est_fy2_mrg, est_fy3_mrg])
+            if mid_year_margin is not None:
+                logger.warning("'extend_analyst_est' is True so a specified 'mid_year_margin' has no effect")
+        else:
+            est_mrg_mid = mid_year_margin
         return self._three_stage_model(year_1=est_fy1_mrg, year_2=est_fy2_mrg, year_3=est_fy3_mrg, mid_year=est_mrg_mid,
                                        terminal_year=terminal_ebit_mrg)
 
@@ -1196,10 +1429,25 @@ class KoyfinAnalyst:
         :return: list of floats
         """
         hist_cap_rev = self.get_capital_to_revenue_ratio(capitalize_rnd=self.rnd_is_capitalized, reporting_type='ltm')
-        initial_cap_rev_ratio = hist_cap_rev.iloc[-1]
-        mid_cap_rev_ratio = hist_cap_rev.iloc[-12:].median()
+        initial_cap_rev_ratio = hist_cap_rev.iloc[-12:, 0].median()
         terminal_cap_rev_ratio = self.get_filtered_comparables_df(filter_by='Industry')['Capital Sales Ratio'].median()
-        return pd.Series([initial_cap_rev_ratio, None, None, None, mid_cap_rev_ratio, None, None, None, None, terminal_cap_rev_ratio, terminal_cap_rev_ratio]).interpolate().values.tolist()
+        return pd.Series([initial_cap_rev_ratio, None, None, None, None, None, None, None, None, terminal_cap_rev_ratio,
+                          terminal_cap_rev_ratio]).interpolate().values.tolist()
+
+    def reinvestment_rate_forecast(self) -> list:
+        """
+        Returns an array with estimated reinvestment rate
+        Assumes that the initial reinvestment rate starts at last 12 months, converges to median at 5 year then
+        converges to sector median
+        :return: list
+        """
+        hist_reinvest_per_rev_df = self.get_reinvestments_per_revenue(capitalize_rnd=self.rnd_is_capitalized,
+                                                                      reporting_type='ltm')
+        initial = hist_reinvest_per_rev_df.iloc[-1, 0]
+        mid = hist_reinvest_per_rev_df.iloc[:, 0].median()
+        terminal = self.get_filtered_comparables_df(filter_by='Sector')['Reinvestment Per Revenue (%)'].median() / 100
+        return self._three_stage_model(year_1=initial, year_2=initial, year_3=initial, mid_year=mid,
+                                       terminal_year=terminal)
 
     def tax_rate_forecast(self, marginal_tax_rate: float) -> list:
         """
@@ -1210,7 +1458,7 @@ class KoyfinAnalyst:
         """
         effective_tax_rate = self.get_effective_tax_rate(reporting_type='fq').iloc[-4:, 0].mean()
         tax_rate_list = [effective_tax_rate, None, None, None, marginal_tax_rate, marginal_tax_rate, marginal_tax_rate,
-                         marginal_tax_rate, marginal_tax_rate, marginal_tax_rate]
+                         marginal_tax_rate, marginal_tax_rate, marginal_tax_rate, marginal_tax_rate]
         return pd.Series(tax_rate_list).interpolate().values.tolist()
 
     @staticmethod
@@ -1224,7 +1472,8 @@ class KoyfinAnalyst:
         :param terminal_year: float
         :return: list
         """
-        return pd.Series([year_1, year_2, year_3, None, mid_year, None, None, None, None, terminal_year, terminal_year]).interpolate().values.tolist()
+        return pd.Series([year_1, year_2, year_3, None, mid_year, None, None, None, None, terminal_year,
+                          terminal_year]).interpolate().values.tolist()
 
     @property
     def ticker(self):
@@ -1258,3 +1507,15 @@ class KoyfinAnalyst:
     @property
     def rnd_is_capitalized(self):
         return self._rnd_is_capitalized
+
+
+if __name__ == '__main__':
+    analyst = KoyfinAnalyst(company='ericb')
+    analyst.set_financial_reports()
+    analyst.set_cross_sectional_company_data()
+    df = analyst.industry_comparision(
+        data_columns=['Total Revenues/CAGR (5Y TTM)', 'Total Revenues/CAGR (3Y TTM)', 'Est Rev CAGR (3Y)',
+                      'Ebit Margin - Est Avg (Ntm)', 'Ebit Margin % (Ltm)', 'Ebit Margin % (7Y Ttm)',
+                      'Ebit Margin % (Median Ttm)'])
+    df.to_clipboard()
+    print(df)

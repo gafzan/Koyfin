@@ -73,8 +73,10 @@ class KoyfinBot(WebBot):
         :return: None
         """
         logger.info('Login to koyfin.com')
+        self.driver.maximize_window()
+        self.bot_sleep(2)
         # click the 'login' button
-        self.click_button(x_path='//*[@id="root"]/div[1]/section/div[1]/div[2]/button[2]/label')
+        self.driver.find_elements(By.XPATH, "//*[text()='Log In']")[-1].click()
         self.bot_sleep()
         # type the email
         self.type_into_box(x_path='//*[@id="root"]/div[1]/div/div[2]/div/form/div[2]/div[1]/div/div[2]/input',
@@ -342,7 +344,6 @@ class KoyfinBot(WebBot):
         :return:
         """
         logger.info('Go to my screen page')
-        self.driver.maximize_window()
 
         # click the "screens" button
         self.bot_sleep(2)
@@ -442,7 +443,7 @@ class KoyfinBot(WebBot):
             if use_contains_text:
                 self.driver.find_elements(By.XPATH, f"//*[contains(text(), '{item}')]")[-1].click()
             else:
-                self.driver.find_element(By.XPATH, f"//*[text()='{item}']").click()
+                self.driver.find_elements(By.XPATH, f"//*[text()='{item}']")[-1].click()
 
             # clear the content in the search bar by clicking, select all and delete
             search_bar_element.click()
@@ -488,7 +489,10 @@ class KoyfinBot(WebBot):
             logger.info(f"Lookup '{data_name}'")
             search_bar.send_keys(data_name)  # insert the name of the data in the search bar
             self.bot_sleep(1)
-            self.click_button('//*[@id="koy-data-source-item-0"]/div[1]/div[2]/div[1]')  # select the top element
+            try:
+                self.driver.find_element(By.XPATH, f"//*[text()='{data_name}']").click()  # click the data name
+            except:
+                self.driver.find_element(By.XPATH, '//*[@id="koy-data-source-item-0"]/div[1]/div[2]/div[1]').click()  # click first element
             self.bot_sleep(1)
 
             # if we are only adding data that does not have any transformation (like 'Sector') data_metas is None
@@ -499,6 +503,7 @@ class KoyfinBot(WebBot):
                 for data_meta in data_metas:
                     logger.info(f"{data_meta} ({data_name})")
                     data_meta_element = self.driver.find_element(By.XPATH, f"//*[contains(text(),'{data_meta}')]")
+                    # data_meta_element = self.driver.find_element(By.XPATH, f"//*[text()={data_meta}]")
                     data_meta_element.click()
                     self.bot_sleep(2)
 
